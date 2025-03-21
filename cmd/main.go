@@ -5,6 +5,7 @@ import (
 
 	"github.com/devasherr/socket-rooms/db"
 	"github.com/devasherr/socket-rooms/internal/user"
+	"github.com/devasherr/socket-rooms/internal/ws"
 	"github.com/devasherr/socket-rooms/router"
 )
 
@@ -18,6 +19,9 @@ func main() {
 	userSvc := user.NewService(userRep)
 	userHandler := user.NewHandler(userSvc)
 
-	router.InitRouter(userHandler)
+	hub := ws.NewHub()
+	wsHandler := ws.NewHandler(hub)
+
+	router.InitRouter(userHandler, wsHandler)
 	router.Start("0.0.0.0:7777")
 }
