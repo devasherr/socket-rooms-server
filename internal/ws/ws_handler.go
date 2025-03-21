@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 type Handler struct {
@@ -35,4 +36,88 @@ func (h *Handler) CreateRoom(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, req)
+}
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
+func (h *Handler) JoinRoom(c *gin.Context) {
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	roomID := c.Param("roomId")
+	clientID := c.Query("userId")
+	userName := c.Query("userName")
+
+	cl := &Client{
+		Conn:     conn,
+		Message:  make(chan *Message, 10),
+		ID:       clientID,
+		RoomID:   roomID,
+		UserName: userName,
+	}
+
+	m := &Message{
+		// Content: userName + "has joined the room",
+		Content:  "A new user has joined the room",
+		RoomID:   roomID,
+		UserName: userName,
+	}
+
+	h.hub.Register <- cl
+	h.hub.Broadcast <- m
+
+	go cl.writeMessage()
+	cl.readMessage(h.hub)
+}
+
+type RoomRes struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func (h *Handler) GetRooms(c *gin.Context) {
+	rooms := make([]RoomRes, 0)
+
+	for _, r := range h.hub.Rooms {
+		rooms = append(rooms, RoomRes{
+			ID:   r.ID,
+			Name: r.Name,
+		})
+	}
+
+	c.JSON(http.StatusOK, rooms)
+}
+
+type ClientRes struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func (h *Handler) GetClients(c *gin.Context) {
+	var clients []ClientRes
+	rootId := c.Param("roomId")
+
+	if _, ok := h.hub.Rooms[rootId]; !ok {
+		// return empty clients
+		c.JSON(http.StatusOK, make([]ClientRes, 0))
+		return
+	}
+
+	for _, c := range h.hub.Rooms[rootId].Clients {
+		clients = append(clients, ClientRes{
+			ID:   c.ID,
+			Name: c.UserName,
+		})
+	}
+
+	c.JSON(http.StatusOK, clients)
 }
