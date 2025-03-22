@@ -35,7 +35,7 @@ func (h *Hub) Run() {
 			}
 		case cl := <-h.UnRegister:
 			if _, ok := h.Rooms[cl.RoomID]; ok {
-				if _, ok := h.Rooms[cl.ID].Clients[cl.ID]; ok {
+				if _, ok := h.Rooms[cl.RoomID].Clients[cl.ID]; ok {
 					// broadcast message saying client has left the room
 					if len(h.Rooms[cl.RoomID].Clients) != 0 {
 						h.Broadcast <- &Message{
@@ -45,7 +45,7 @@ func (h *Hub) Run() {
 							UserName: cl.UserName,
 						}
 					}
-					delete(h.Rooms[cl.ID].Clients, cl.ID)
+					delete(h.Rooms[cl.RoomID].Clients, cl.ID)
 					close(cl.Message)
 				}
 			}

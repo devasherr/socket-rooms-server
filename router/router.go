@@ -21,7 +21,7 @@ func InitRouter(userHandler *user.Handler, wsHandler *ws.Handler) {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "http://localhost:3000"
+			return origin == "http://localhost:5173"
 		},
 		MaxAge: 12 * time.Hour,
 	}))
@@ -32,7 +32,7 @@ func InitRouter(userHandler *user.Handler, wsHandler *ws.Handler) {
 
 	r.POST("/ws/createRoom", wsHandler.CreateRoom)
 	r.GET("/ws/joinRoom/:roomId", wsHandler.JoinRoom)
-	r.GET("/ws/getRooms/", wsHandler.GetRooms)
+	r.GET("/ws/getRooms", wsHandler.GetRooms)
 	r.GET("/ws/getClients/:roomId", wsHandler.GetClients)
 }
 
